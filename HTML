@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Vendas - Bioengenharia e Revegetação</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.32/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        :root {
+            --bg: #f8f9fa;
+            --card-bg: white;
+            --text: #333;
+            --text-light: #666;
+            --primary: #2E86DE;
+            --success: #27AE60;
+            --warn: #F39C12;
+            --danger: #E74C3C;
+            --dark-blue: #1a365d;
+            --shadow: 0 4px 6px rgba(0,0,0,0.1);
+            --border: #dee2e6;
+        }
+        body.dark {
+            --bg: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text: #eee;
+            --text-light: #ccc;
+            --border: #444;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        header {
+            background: var(--dark-blue);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        .datetime {
+            font-size: 1rem;
+        }
+        .actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .actions button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .actions button:hover {
+            opacity: 0.9;
+        }
+        #dark-toggle {
+            background: #34495e;
+            font-size: 1.2rem;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        section {
+            margin-bottom: 3rem;
+        }
+        h2 {
+            margin-bottom: 1.5rem;
+            color: var(--dark-blue);
+        }
+        .kpis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+        .kpi-card {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            border-left: 4px solid var(--primary);
+        }
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .kpi-label {
+            color: var(--text-light);
+            margin-top: 0.5rem;
+        }
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+        }
+        .chart-container {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+        .chart-container h3 {
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        canvas {
+            max-height: 300px;
+        }
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .filter-group label {
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        select[multiple] {
+            height: 120px;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        .status-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .status-filters label {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            background: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        thead {
+            background: var(--primary);
+            color: white;
+        }
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        tbody tr:hover {
+            background: #f8f9ff;
+        }
+        body.dark tbody tr:hover {
+            background: #3d3d3d;
+        }
+        .badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: white;
+        }
+        .score-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-weight: 500;
+            color: white;
+            background: hsl(calc(120 * var(--score-perc)), 60%, 45%);
+        }
+        .seg-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .pagination button {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            background: var(--card-bg);
+            cursor: pointer;
+        }
+        .recommendations {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        .rec-card {
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+        .rec-urgente { border-left: 4px solid var(--danger); background: var(--card-bg); }
+        .rec-potencial { border-left: 4px solid var(--success); background: var(--card-bg); }
+        .rec-risco { border-left: 4px solid var(--warn); background: var(--card-bg); }
+        .rec-item {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255,255,255,0.5);
+            border-radius: 4px;
+        }
+        body.dark .rec-item { background: rgba(0,0,0,0.3); }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background: var(--card-bg);
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+        }
+        .close {
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            font-size: 2rem;
+            cursor: pointer;
+        }
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            header { flex-direction: column; text-align: center; }
+            .charts-grid { grid-template-columns: 1fr; }
+            table { font-size: 0.9rem; }
+            th, td { padding: 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">Sistema de Vendas - Bioengenharia e Revegetação</div>
+        <div id="datetime" class="datetime"></div>
+        <div class="actions">
+            <button onclick="updateData()"><i class="fas fa-sync-alt"></i> Atualizar Dados</button>
+            <button onclick="exportPDF()"><i class="fas fa-download"></i> Exportar Relatório</button>
+            <button onclick="showGuia()"><i class="fas fa-book"></i> Ver Guia</button>
+            <button id="dark-toggle" onclick="toggleDarkMode()">🌙</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <section id="kpis-sec">
+            <h2><i class="fas fa-chart-line"></i> KPIs Principais</h2>
+            <div class="kpis" id="kpis-grid">
+                <!-- KPIs populated by JS -->
+            </div>
+        </section>
+
+        <section id="charts-sec">
+            <h2><i class="fas fa-chart-bar"></i> Gráficos Interativos</h2>
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>Clientes por Segmento</h3>
+                    <canvas id="chart-segmento"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Clientes por Estado (Top 10)</h3>
+                    <canvas id="chart-estado"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Status de Contato</h3>
+                    <canvas id="chart-status"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Valor Histórico Médio por Segmento</h3>
+                    <canvas id="chart-valor-seg"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Distribuição de Potencial (Funil)</h3>
+                    <canvas id="chart-potencial"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Taxa de Resposta por Canal</h3>
+                    <canvas id="chart-canal"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Próximos Contatos (Timeline 30 dias)</h3>
+                    <canvas id="chart-timeline"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Score de Prioridade (Histograma)</h3>
+                    <canvas id="chart-score"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="table-sec">
+            <h2><i class="fas fa-table"></i> Lista de Clientes</h2>
+            <div class="filters">
+                <div class="filter-group">
+                    <label>Segmento</label>
+                    <select id="filter-segmento" multiple>
+                        <!-- populated -->
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Estado</label>
+                    <select id="filter-estado" multiple>
+                        <!-- populated -->
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Score Prioridade <span id="score-val">50</span></label>
+                    <input type="range" id="filter-score" min="0" max="100" value="0">
+                </div>
+                <div class="filter-group">
+                    <label>Status</label>
+                    <div class="status-filters" id="filter-status"></div>
+                </div>
+                <div class="filter-group">
+                    <label>Potencial</label>
+                    <select id="filter-potencial">
+                        <option value="">Todos</option>
+                        <option value="Baixo">Baixo</option>
+                        <option value="Médio">Médio</option>
+                        <option value="Alto">Alto</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Ordenar por</label>
+                    <select id="sort-by">
+                        <option value="score">Prioridade</option>
+                        <option value="proximoDias">Próximo Contato</option>
+                        <option value="valorHistorico">Valor Histórico</option>
+                    </select>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Empresa</th>
+                        <th>Segmento</th>
+                        <th>Estado</th>
+                        <th>Score Prioridade</th>
+                        <th>Último Contato</th>
+                        <th>Próximo Contato</th>
+                        <th>Status</th>
+                        <th>Ação Recomendada</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <!-- populated -->
+                </tbody>
+            </table>
+            <div class="pagination" id="pagination"></div>
+        </section>
+
+        <section id="rec-sec">
+            <h2><i class="fas fa-lightbulb"></i> Recomendações em Tempo Real</h2>
+            <div class="recommendations">
+                <div class="rec-card rec-urgente">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Ações Urgentes (Vencidas)</h3>
+                    <div id="rec-urgentes"></div>
+                </div>
+                <div class="rec-card rec-potencial">
+                    <h3><i class="fas fa-trophy"></i> Melhor Potencial Hoje (Top 5)</h3>
+                    <div id="rec-potencial"></div>
+                </div>
+                <div class="rec-card rec-risco">
+                    <h3><i class="fas fa-clock"></i> Em Risco de Perda (60+ dias)</h3>
+                    <div id="rec-risco"></div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modal Cliente -->
+    <div id="client-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">×</span>
+            <h2 id="modal-empresa"></h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap:1rem; margin-top:1rem;">
+                <p><strong>Segmento:</strong> <span id="modal-segmento"></span></p>
+                <p><strong>Estado:</strong> <span id="modal-estado"></span></p>
+                <p><strong>Score:</strong> <span id="modal-score"></span></p>
+                <p><strong>Status:</strong> <span id="modal-status"></span></p>
+                <p><strong>Potencial:</strong> <span id="modal-potencial"></span></p>
+                <p><strong>Último Contato:</strong> <span id="modal-ultimo"></span></p>
+                <p><strong>Próximo Contato:</strong> <span id="modal-proximo"></span></p>
+            </div>
+            <h3>Histórico de Contatos</h3>
+            <ul id="modal-history"></ul>
+        </div>
+    </div>
+
+    <!-- Guia Modal -->
+    <div id="guia-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeGuia()">×</span>
+            <h2>Guia de Uso</h2>
+            <p>Use os filtros para refinar a tabela, clique em empresas para detalhes, exporte relatórios e alterne modo escuro.</p>
+        </div>
+    </div>
+
+    <script>
+        let clients = [];
+        let filteredClients = [];
+        let currentPage = 1;
+        const pageSize = 25;
+        const totalClientes = 2000;
+
+        const segments = ['Construção Civil', 'Mineração', 'Energia', 'Transporte', 'Agronegócio', 'Paisagismo'];
+        const states = ['SP', 'MG', 'RJ', 'BA', 'RS', 'PR', 'PE', 'CE', 'PA', 'GO'];
+        const statuses = ['Sem Contato', 'Conversando', 'Proposta', 'Negociando', 'Fechado', 'Perdido'];
+        const potenciais = ['Baixo', 'Médio', 'Alto'];
+        const canais = ['Email', 'Telefone', 'WhatsApp', 'LinkedIn', 'Visita'];
+        const segColors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c'];
+        const statusColors = {
+            'Sem Contato': '#95a5a6',
+            'Conversando': '#3498db',
+            'Proposta': '#f39c12',
+            'Negociando': '#f1c40f',
+            'Fechado': '#27ae60',
+            'Perdido': '#e74c3c'
+        };
+
+        function generateClients() {
+            clients = [];
+            for (let i = 0; i < 300; i++) {
+                const segmento = segments[Math.floor(Math.random() * segments.length)];
+                const estado = states[Math.floor(Math.random() * states.length)];
+                const status = statuses[Math.floor(Math.random() * statuses.length)];
+                const potencial = potenciais[Math.floor(Math.random() * potenciais.length)];
+                const canal = canais[Math.floor(Math.random() * canais.length)];
+                const ultimo = new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR');
+                const diasProx = (Math.random() - 0.5) * 60;
+                const proximo = new Date(Date.now() + diasProx * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR');
+                const resposta = Math.random() > 0.4;
+                clients.push({
+                    id: i,
+                    empresa: `Empresa ${i + 1} ${['Solutions', 'Tech', 'Indústria', 'Group', 'Corp'][Math.floor(Math.random()*5)]}`,
+                    segmento,
+                    estado,
+                    score: Math.floor(Math.random() * 101),
+                    ultimoContato: ultimo,
+                    proximoContato: proximo,
+                    proximoDias: Math.round(diasProx),
+                    status,
+                    potencial,
+                    canal,
+                    resposta,
+                    valorHistorico: Math.floor(Math.random() * 9000 + 1000)
+                });
+            }
+        }
+
+        function daysTo(dateStr) {
+            const d = new Date(dateStr.split('/').reverse().join('-'));
+            const now = new Date();
+            return Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+        }
+
+        function daysFrom(dateStr) {
+            const d = new Date(dateStr.split('/').reverse().join('-'));
+            const now = new Date();
+            return Math.ceil((now - d) / (1000 * 60 * 60 * 24));
+        }
+
+        function getAcao(status) {
+            const acoes = {
+                'Sem Contato': 'Abordar',
+                'Conversando': 'Follow-up',
+                'Proposta': 'Negociar',
+                'Negociando': 'Fechar',
+                'Fechado': 'Upsell',
+                'Perdido': 'Reabordar'
+            };
+            return acoes[status] || 'Verificar';
+        }
+
+        function updateKPIs() {
+            const abordadosPerc = clients.filter(c => c.status !== 'Sem Contato').length / clients.length;
+            const abordados = Math.round(totalClientes * abordadosPerc);
+            const followupPerc = clients.filter(c => ['Conversando', 'Proposta', 'Negociando'].includes(c.status)).length / clients.length;
+            const followup = Math.round(totalClientes * followupPerc);
+            const fechados = Math.round(clients.filter(c => c.status === 'Fechado').length / clients.length * totalClientes / 12); // approx monthly
+            const conv = Math.round((fechados / abordados) * 100 * 10) / 10;
+            const kpis = [
+                { label: 'Total de Clientes', value: totalClientes.toLocaleString() },
+                { label: 'Clientes Abordados', value: `${abordados.toLocaleString()} (${Math.round(abordadosPerc * 100 * 10)/10}%)` },
+                { label: 'Em Follow-up Ativo', value: `${followup.toLocaleString()} (${Math.round(followupPerc * 100 * 10)/10}%)` },
+                { label: 'Fechamentos no Mês', value: fechados },
+                { label: 'Taxa de Conversão', value: `${conv}%` },
+                { label: 'ROI de Vendas', value: '2.8x' }
+            ];
+            const grid = document.getElementById('kpis-grid');
+            grid.innerHTML = kpis.map(kpi => `
+                <div class="kpi-card">
+                    <div class="kpi-value">${kpi.value}</div>
+                    <div class="kpi-label">${kpi.label}</div>
+                </div>
+            `).join('');
+        }
+
+        function getSegmentCounts() {
+            return segments.map((s, i) => ({
+                label: s,
+                value: clients.filter(c => c.segmento === s).length
+            }));
+        }
+
+        function getEstadoCounts() {
+            return states.map(s => ({
+                label: s,
+                value: clients.filter(c => c.estado === s).length
+            }));
+        }
+
+        function getStatusCounts() {
+            return statuses.map(s => ({
+                label: s,
+                value: clients.filter(c => c.status === s).length
+            }));
+        }
+
+        function getValorSeg() {
+            return segments.map(s => {
+                const seg = clients.filter(c => c.segmento === s);
+                const avg = seg.length ? Math.round(seg.reduce((a, b) => a + b.valorHistorico, 0) / seg.length / 1000) : 0;
+                return { label: s, value: avg };
+            });
+        }
+
+        function getPotencialCounts() {
+            return potenciais.map(p => ({
+                label: p,
+                value: clients.filter(c => c.potencial === p).length
+            }));
+        }
+
+        function getCanalResponseRate() {
+            const canalCounts = {}, respCounts = {};
+            clients.forEach(c => {
+                const ch = c.canal;
+                canalCounts[ch] = (canalCounts[ch] || 0) + 1;
+                if (c.resposta) respCounts[ch] = (respCounts[ch] || 0) + 1;
+            });
+            return canais.map(ch => {
+                const total = canalCounts[ch] || 0;
+                const resp = respCounts[ch] || 0;
+                return {
+                    label: ch,
+                    value: total ? Math.round((resp / total) * 100) : 0
+                };
+            });
+        }
+
+        function getTimelineData() {
+            const days = 15;
+            const data = new Array(days * 2 + 1).fill(0);
+            const labels = [];
+            clients.forEach(c => {
+                const d = daysTo(c.proximoContato);
+                const idx = d + days;
+                if (idx >= 0 && idx < data.length) data[idx]++;
+            });
+            for (let i = -days; i <= days; i++) labels.push(`${i}d`);
+            return { labels, data };
+        }
+
+        function getScoreHistogram() {
+            const bins = new Array(11).fill(0);
+            const labels = [];
+            clients.forEach(c => bins[Math.floor(c.score / 10)]++);
+            for (let i = 0; i < 10; i++) labels.push(`${i * 10}-${(i + 1) * 10 - 1}`);
+            labels.push('100');
+            return { labels, data: bins };
+        }
+
+        function createCharts() {
+            const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#e91e63'];
+
+            // Segmento donut
+            new Chart(document.getElementById('chart-segmento'), {
+                type: 'doughnut',
+                data: {
+                    labels: getSegmentCounts().map(d => d.label),
+                    datasets: [{ data: getSegmentCounts().map(d => d.value), backgroundColor: colors.slice(0,6) }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // Estado horizontal bar
+            new Chart(document.getElementById('chart-estado'), {
+                type: 'bar',
+                data: {
+                    labels: getEstadoCounts().map(d => d.label),
+                    datasets: [{ label: 'Count', data: getEstadoCounts().map(d => d.value), backgroundColor: colors.slice(0,10) }]
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
+            });
+
+            // Status bar
+            new Chart(document.getElementById('chart-status'), {
+                type: 'bar',
+                data: {
+                    labels: getStatusCounts().map(d => d.label),
+                    datasets: [{ label: 'Count', data: getStatusCounts().map(d => d.value), backgroundColor: statuses.map(s => statusColors[s]) }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // Valor seg bar
+            new Chart(document.getElementById('chart-valor-seg'), {
+                type: 'bar',
+                data: {
+                    labels: getValorSeg().map(d => d.label),
+                    datasets: [{ label: 'Média (R$ mil)', data: getValorSeg().map(d => d.value), backgroundColor: colors.slice(0,6) }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // Potencial donut
+            new Chart(document.getElementById('chart-potencial'), {
+                type: 'doughnut',
+                data: {
+                    labels: getPotencialCounts().map(d => d.label),
+                    datasets: [{ data: getPotencialCounts().map(d => d.value), backgroundColor: ['#95a5a6', '#f39c12', '#27ae60'] }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // Canal bar
+            new Chart(document.getElementById('chart-canal'), {
+                type: 'bar',
+                data: {
+                    labels: getCanalResponseRate().map(d => d.label),
+                    datasets: [{ label: '% Resposta', data: getCanalResponseRate().map(d => d.value), backgroundColor: colors.slice(0,5) }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } }
+            });
+
+            // Timeline line
+            const tl = getTimelineData();
+            new Chart(document.getElementById('chart-timeline'), {
+                type: 'line',
+                data: {
+                    labels: tl.labels,
+                    datasets: [{ label: 'Contatos', data: tl.data, borderColor: '#2E86DE', fill: false }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // Score hist bar
+            const hist = getScoreHistogram();
+            new Chart(document.getElementById('chart-score'), {
+                type: 'bar',
+                data: {
+                    labels: hist.labels,
+                    datasets: [{ label: 'Frequência', data: hist.data, backgroundColor: '#2E86DE' }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        function populateFilters() {
+            const segSelect = document.getElementById('filter-segmento');
+            segments.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = s;
+                segSelect.appendChild(opt);
+            });
+
+            const estSelect = document.getElementById('filter-estado');
+            states.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = s;
+                estSelect.appendChild(opt);
+            });
+
+            const statusDiv = document.getElementById('filter-status');
+            statuses.forEach(s => {
+                const label = document.createElement('label');
+                label.innerHTML = `<input type="checkbox" value="${s}" checked> ${s}`;
+                statusDiv.appendChild(label);
+            });
+        }
+
+        function applyFilters() {
+            const segs = Array.from(document.getElementById('filter-segmento').selectedOptions).map(o => o.value);
+            const ests = Array.from(document.getElementById('filter-estado').selectedOptions).map(o => o.value);
+            const minScore = parseInt(document.getElementById('filter-score').value);
+            const pot = document.getElementById('filter-potencial').value;
+            const statusChecked = Array.from(document.querySelectorAll('#filter-status input:checked')).map(i => i.value);
+
+            filteredClients = clients.filter(c => 
+                (segs.length === 0 || segs.includes(c.segmento)) &&
+                (ests.length === 0 || ests.includes(c.estado)) &&
+                c.score >= minScore &&
+                (pot === '' || c.potencial === pot) &&
+                statusChecked.includes(c.status)
+            );
+
+            const sortBy = document.getElementById('sort-by').value;
+            filteredClients.sort((a, b) => {
+                let va, vb;
+                if (sortBy === 'score') {
+                    va = a.score; vb = b.score;
+                } else if (sortBy === 'proximoDias') {
+                    va = daysTo(a.proximoContato); vb = daysTo(b.proximoContato);
+                } else if (sortBy === 'valorHistorico') {
+                    va = a.valorHistorico; vb = b.valorHistorico;
+                }
+                return vb - va;
+            });
+
+            currentPage = 1;
+            renderTable();
+            renderPagination();
+            updateRecommendations();
+        }
+
+        function renderTable() {
+            const start = (currentPage - 1) * pageSize;
+            const end = start + pageSize;
+            const pageData = filteredClients.slice(start, end);
+
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = pageData.map(client => {
+                const segIdx = segments.indexOf(client.segmento);
+                const segColor = segColors[segIdx] || '#95a5a6';
+                const diasProx = daysTo(client.proximoContato);
+                const diasColor = diasProx < 0 ? 'var(--danger)' : diasProx < 7 ? 'var(--warn)' : 'var(--success)';
+                const scorePerc = client.score / 100;
+                return `
+                    <tr data-client-id="${client.id}">
+                        <td><a href="#" onclick="showClient(clients.find(c=>c.id==${client.id})); return false;">${client.empresa}</a></td>
+                        <td><span class="seg-badge" style="background:${segColor};color:white;">${client.segmento}</span></td>
+                        <td>${client.estado}</td>
+                        <td><span class="score-badge" style="--score-perc:${scorePerc}">${client.score}</span></td>
+                        <td>${client.ultimoContato}</td>
+                        <td style="color:${diasColor}">${client.proximoContato} (${diasProx}d)</td>
+                        <td><span class="badge" style="background:${statusColors[client.status]}">${client.status}</span></td>
+                        <td>${getAcao(client.status)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderPagination() {
+            const totalPages = Math.ceil(filteredClients.length / pageSize);
+            const pagDiv = document.getElementById('pagination');
+            if (totalPages <= 1) {
+                pagDiv.innerHTML = '';
+                return;
+            }
+            pagDiv.innerHTML = `
+                <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+                <span>Página ${currentPage} de ${totalPages}</span>
+                <button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+            `;
+        }
+
+        function changePage(page) {
+            const totalPages = Math.ceil(filteredClients.length / pageSize);
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            renderTable();
+            renderPagination();
+        }
+
+        function updateRecommendations() {
+            // Urgentes
+            const urgentes = clients.filter(c => daysTo(c.proximoContato) < 0).slice(0, 5);
+            document.getElementById('rec-urgentes').innerHTML = urgentes.map(c => 
+                `<div class="rec-item">${c.empresa} - ${daysTo(c.proximoContato)} dias</div>`
+            ).join('') || '<div class="rec-item">Nenhuma ação urgente</div>';
+
+            // Potencial top5
+            const topPot = clients.sort((a, b) => b.score - a.score).slice(0, 5);
+            document.getElementById('rec-potencial').innerHTML = topPot.map(c => 
+                `<div class="rec-item">${c.empresa} (Score: ${c.score})</div>`
+            ).join('');
+
+            // Risco 60+ dias sem contato
+            const risco = clients.filter(c => daysFrom(c.ultimoContato) > 60).slice(0, 5);
+            document.getElementById('rec-risco').innerHTML = risco.map(c => 
+                `<div class="rec-item">${c.empresa} - ${daysFrom(c.ultimoContato)} dias</div>`
+            ).join('') || '<div class="rec-item">Nenhum em risco</div>';
+        }
+
+        function showClient(client) {
+            document.getElementById('modal-empresa').textContent = client.empresa;
+            document.getElementById('modal-segmento').textContent = client.segmento;
+            document.getElementById('modal-estado').textContent = client.estado;
+            document.getElementById('modal-score').textContent = client.score;
+            document.getElementById('modal-status').textContent = client.status;
+            document.getElementById('modal-potencial').textContent = client.potencial;
+            document.getElementById('modal-ultimo').textContent = client.ultimoContato;
+            document.getElementById('modal-proximo').textContent = client.proximoContato;
+
+            const hist = [];
+            for (let j = 0; j < Math.floor(Math.random() * 3) + 3; j++) {
+                const acoesHist = ['Email', 'Telefone', 'WhatsApp', 'Reunião', 'Proposta'];
+                const notas = ['Sem resposta', 'Interessado', 'Negativa', 'Positiva', 'Fechado'];
+                hist.push({
+                    data: new Date(Date.now() - Math.random() * 365 * 86400000).toLocaleDateString('pt-BR'),
+                    acao: acoesHist[Math.floor(Math.random() * acoesHist.length)],
+                    nota: notas[Math.floor(Math.random() * notas.length)]
+                });
+            }
+            const ul = document.getElementById('modal-history');
+            ul.innerHTML = hist.map(h => `<li>${h.data} - ${h.acao}: ${h.nota}</li>`).join('');
+
+            document.getElementById('client-modal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('client-modal').style.display = 'none';
+        }
+
+        function showGuia() {
+            document.getElementById('guia-modal').style.display = 'block';
+        }
+
+        function closeGuia() {
+            document.getElementById('guia-modal').style.display = 'none';
+        }
+
+        function updateData() {
+            generateClients();
+            updateKPIs();
+            createCharts();
+            applyFilters();
+        }
+
+        async function exportPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            let y = 20;
+            doc.setFontSize(16);
+            doc.text('Relatório de Vendas B2B', 14, y);
+            y += 10;
+            doc.setFontSize(10);
+            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, y);
+            y += 15;
+
+            // KPIs simples
+            doc.text('KPIs Principais:', 14, y);
+            y += 7;
+            doc.text(`Total Clientes: ${totalClientes.toLocaleString()}`, 14, y); y += 7;
+            // etc, simplified
+
+            // Top 20 clients
+            const top20 = clients.sort((a,b) => b.score - a.score).slice(0,20);
+            doc.autoTable({
+                head: [['Empresa', 'Segmento', 'Estado', 'Score', 'Status']],
+                body: top20.map(c => [c.empresa.substring(0,20)+'...', c.segmento, c.estado, c.score, c.status]),
+                startY: y,
+                theme: 'grid',
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: [46, 134, 222] }
+            });
+
+            doc.save('relatorio-vendas.pdf');
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark'));
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('darkMode') === 'true') {
+                document.body.classList.add('dark');
+            }
+            generateClients();
+            populateFilters();
+            updateKPIs();
+            createCharts();
+            applyFilters();
+
+            // Filter changes
+            ['filter-segmento', 'filter-estado', 'filter-potencial', 'sort-by'].forEach(id => {
+                document.getElementById(id).addEventListener('change', applyFilters);
+            });
+            document.getElementById('filter-score').addEventListener('input', (e) => {
+                document.getElementById('score-val').textContent = e.target.value;
+                applyFilters();
+            });
+            document.getElementById('filter-status').addEventListener('change', applyFilters);
+
+            // Modal clicks
+            window.onclick = (e) => {
+                if (e.target.classList.contains('modal')) {
+                    e.target.style.display = 'none';
+                }
+            };
+
+            // Datetime
+            setInterval(() => {
+                document.getElementById('datetime').textContent = new Date().toLocaleString('pt-BR');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
